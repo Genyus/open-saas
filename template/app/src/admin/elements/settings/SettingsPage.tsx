@@ -1,30 +1,24 @@
 import { FileText, Mail, Upload, User } from "lucide-react";
 import { FormEvent } from "react";
-import toast from "react-hot-toast";
 import { type AuthUser } from "wasp/auth";
-import { Button } from "../../../components/ui/button";
+import { Button } from "../../../client/components/ui/button";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-} from "../../../components/ui/card";
-import { Input } from "../../../components/ui/input";
-import { Label } from "../../../components/ui/label";
-import { Textarea } from "../../../components/ui/textarea";
+} from "../../../client/components/ui/card";
+import { Input } from "../../../client/components/ui/input";
+import { Label } from "../../../client/components/ui/label";
+import { Textarea } from "../../../client/components/ui/textarea";
 import Breadcrumb from "../../layout/Breadcrumb";
 import DefaultLayout from "../../layout/DefaultLayout";
 
 const SettingsPage = ({ user }: { user: AuthUser }) => {
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    // TODO add toast provider / wrapper
+    // TODO implement
     event.preventDefault();
-    const confirmed = confirm("Are you sure you want to save the changes?");
-    if (confirmed) {
-      toast.success("Your changes have been saved successfully!");
-    } else {
-      toast.error("Your changes have not been saved!");
-    }
+    alert("Not yet implemented");
   };
 
   return (

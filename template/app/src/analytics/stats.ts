@@ -2,14 +2,17 @@ import { listOrders } from "@lemonsqueezy/lemonsqueezy.js";
 import Stripe from "stripe";
 import { type DailyStats } from "wasp/entities";
 import { type DailyStatsJob } from "wasp/server/jobs";
-import { stripe } from "../payment/stripe/stripeClient";
+import { stripeClient } from "../payment/stripe/stripeClient";
 import {
   getDailyPageViews,
   getSources,
 } from "./providers/plausibleAnalyticsUtils";
 // import { getDailyPageViews, getSources } from './providers/googleAnalyticsUtils';
+import { OrderStatus } from "@polar-sh/sdk/models/components/orderstatus.js";
 import { paymentProcessor } from "../payment/paymentProcessor";
 import { SubscriptionStatus } from "../payment/plans";
+import { polarClient } from "../payment/polar/polarClient";
+import { assertUnreachable } from "../shared/utils";
 
 export type DailyStatsProps = {
   dailyStats?: DailyStats;
@@ -60,10 +63,11 @@ export const calculateDailyStats: DailyStatsJob<never, void> = async (
       case "lemonsqueezy":
         totalRevenue = await fetchTotalLemonSqueezyRevenue();
         break;
+      case "polar":
+        totalRevenue = await fetchTotalPolarRevenue();
+        break;
       default:
-        throw new Error(
-          `Unsupported payment processor: ${paymentProcessor.id}`,
-        );
+        assertUnreachable(paymentProcessor.id);
     }
 
     const { totalViews, prevDayViewsChangePercent } = await getDailyPageViews();
@@ -156,7 +160,8 @@ async function fetchTotalStripeRevenue() {
 
   let hasMore = true;
   while (hasMore) {
-    const balanceTransactions = await stripe.balanceTransactions.list(params);
+    const balanceTransactions =
+      await stripeClient.balanceTransactions.list(params);
 
     for (const transaction of balanceTransactions.data) {
       if (transaction.type === "charge") {
@@ -210,4 +215,25 @@ async function fetchTotalLemonSqueezyRevenue() {
     console.error("Error fetching Lemon Squeezy revenue:", error);
     throw error;
   }
+}
+
+async function fetchTotalPolarRevenue(): Promise<number> {
+  let totalRevenue = 0;
+
+  const result = await polarClient.orders.list({
+    limit: 100,
+  });
+
+  for await (const page of result) {
+    const orders = page.result.items || [];
+
+    for (const order of orders) {
+      if (order.status === OrderStatus.Paid && order.totalAmount > 0) {
+        totalRevenue += order.totalAmount;
+      }
+    }
+  }
+
+  // Revenue is in cents so we convert to dollars
+  return totalRevenue / 100;
 }
